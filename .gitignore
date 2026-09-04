@@ -28,7 +28,7 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
-
+.spotifycache
 # --- Editor / IDE ---
 .vscode/
 .idea/
