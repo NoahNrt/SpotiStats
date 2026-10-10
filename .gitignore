@@ -49,3 +49,13 @@ Thumbs.db
 .cache
 .cache-*
 .spotify_token
+
+# --- Spotipy-Token ---
+.cache
+.cache-*
+.spotify_token
+
+# --- Laufzeitdaten des Homelab-Stacks ---
+deploy/collector-data/
+deploy/import/
+deploy/backups/
