@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-
+.cache
 # --- Virtual environment ---
 .venv/
 venv/
@@ -40,3 +40,12 @@ Thumbs.db
 
 # --- Logs ---
 *.log
+# --- Spotipy-Token ---
+.cache
+.cache-*
+.spotify_token
+
+# --- Spotipy-Token ---
+.cache
+.cache-*
+.spotify_token
