@@ -1,0 +1,86 @@
+# SpotiStats – Datenbank, Collector und Grafana auf dem Homelab (Podman, rootless)
+# Alle Befehle im Ordner deploy/ ausführen:  podman compose ...
+# Erste Einrichtung: ./setup.sh (erzeugt .env mit Zufallspasswörtern)
+
+services:
+  db:
+    image: docker.io/library/postgres:16
+    container_name: spotistats-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spotistats
+      POSTGRES_USER: spotistats
+      POSTGRES_PASSWORD: ${SPOTISTATS_DB_PASSWORD}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+      TZ: Europe/Berlin
+    # Kein "ports": Die Datenbank ist nur für die anderen Container erreichbar.
+    # Direkter Zugriff:  podman exec -it spotistats-db psql -U spotistats -d spotistats
+    volumes:
+      - spotistats-pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro,Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spotistats -d spotistats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: docker.io/grafana/grafana-oss:latest   # nach dem ersten erfolgreichen Start auf die laufende Version festpinnen
+    container_name: spotistats-grafana
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+      TZ: Europe/Berlin
+    ports:
+      # Standard: nur lokal. Für Zugriff aus dem Heimnetz in .env GRAFANA_BIND auf die LAN-IP setzen.
+      - "${GRAFANA_BIND:-127.0.0.1}:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro,Z
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro,Z
+
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spotistats-collector
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      SPOTISTATS_DSN: postgresql://spotistats:${SPOTISTATS_DB_PASSWORD}@db:5432/spotistats
+      SPOTISTATS_USER: ${SPOTISTATS_USER:-noah}
+      SPOTIPY_CLIENT_ID: ${SPOTIPY_CLIENT_ID}
+      SPOTIPY_CLIENT_SECRET: ${SPOTIPY_CLIENT_SECRET}
+      SPOTIPY_REDIRECT_URI: ${SPOTIPY_REDIRECT_URI:-http://127.0.0.1:8000/callback}
+      SPOTIPY_CACHE_PATH: /data/.spotify_token
+      TZ: Europe/Berlin
+    volumes:
+      # Hier liegt die Token-Datei (.spotify_token), die auf frame-box mit "collector.py auth" erzeugt wird.
+      - ./collector-data:/data:Z
+
+  # Einmal-Werkzeug zum Import der Exportdateien (startet nicht mit "up"):
+  #   podman compose run --rm importer streaming /import/streaming --user noah
+  importer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["tools"]
+    entrypoint: ["python", "import_spotify.py"]
+    depends_on:
+      - db
+    environment:
+      SPOTISTATS_DSN: postgresql://spotistats:${SPOTISTATS_DB_PASSWORD}@db:5432/spotistats
+    volumes:
+      - ./import:/import:ro,Z
+
+volumes:
+  spotistats-pgdata:
+  grafana-data:

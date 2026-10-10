@@ -1,0 +1,2 @@
+spotipy
+psycopg[binary]>=3.2
