@@ -1,0 +1,412 @@
+{
+  "uid": "spotistats-overview",
+  "title": "SpotiStats Übersicht",
+  "tags": [
+    "spotistats"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "",
+  "time": {
+    "from": "now-1y",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "user",
+        "label": "Benutzer",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "spotistats"
+        },
+        "query": "SELECT user_id AS __value, display_name AS __text FROM users ORDER BY 1",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Streams im Zeitraum",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT count(*) FILTER (WHERE is_counted_stream) AS streams FROM v_play_details WHERE user_id = $user AND $__timeFilter(played_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "description": "Wiedergaben ab 30 Sekunden (Export und API zusammen)."
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Hörzeit (Stunden)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT round(sum(ms_played) / 3600000.0, 1) AS stunden FROM v_play_details WHERE user_id = $user AND $__timeFilter(played_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "description": "Für Wiedergaben aus der API gilt die Titellänge als Hörzeit (Annäherung)."
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Collector-Status",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT DISTINCT ON (job) job, status, started_at AS gestartet, items_written AS geschrieben, message AS hinweis FROM collector_runs WHERE user_id = $user ORDER BY job, started_at DESC"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Streams pro Tag",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT day::timestamptz AS time, streams FROM v_daily_listening WHERE user_id = $user AND $__timeFilter(day) ORDER BY 1"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Hörstunden pro Monat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT month::timestamptz AS time, hours_played AS stunden FROM v_monthly_listening WHERE user_id = $user AND $__timeFilter(month) ORDER BY 1"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "Top 10 Künstler",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT creator_name AS kuenstler, count(*) FILTER (WHERE is_counted_stream) AS streams FROM v_play_details WHERE user_id = $user AND content_type = 'track' AND $__timeFilter(played_at) GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Top 10 Titel",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 12,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT item_title AS titel, creator_name AS kuenstler, count(*) FILTER (WHERE is_counted_stream) AS streams FROM v_play_details WHERE user_id = $user AND content_type = 'track' AND $__timeFilter(played_at) GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "barchart",
+      "title": "Genres (gesamt)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 12,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT genre, streams FROM v_genre_listening WHERE user_id = $user ORDER BY streams DESC LIMIT 15"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "description": "Leer, bis der Job enrich die Genres per API nachgeholt hat."
+    },
+    {
+      "id": 9,
+      "type": "barchart",
+      "title": "Tageszeit (Berliner Zeit)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT lpad(extract(hour FROM played_at_local)::int::text, 2, '0') AS stunde, count(*) FILTER (WHERE is_counted_stream) AS streams FROM v_play_details WHERE user_id = $user AND $__timeFilter(played_at) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Spotify Top-Titel (kurzfristig, letzte Momentaufnahme)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "spotistats"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "spotistats"
+          },
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT rank_no AS platz, name AS titel, artist_name AS kuenstler FROM v_top_items_snapshots WHERE user_id = $user AND item_type = 'track' AND time_range = 'short_term' AND collected_on = (SELECT max(collected_on) FROM top_items WHERE user_id = $user) ORDER BY rank_no LIMIT 20"
+        }
+      ],
+      "options": {},
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}
