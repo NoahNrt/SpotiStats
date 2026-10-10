@@ -40,7 +40,7 @@ services:
       TZ: Europe/Berlin
     ports:
       # Standard: nur lokal. Für Zugriff aus dem Heimnetz in .env GRAFANA_BIND auf die LAN-IP setzen.
-      - "${GRAFANA_BIND:-127.0.0.1}:3000:3000"
+      - "${GRAFANA_BIND:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro,Z
